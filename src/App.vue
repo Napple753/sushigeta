@@ -1,54 +1,22 @@
 <template>
   <v-app>
-    <v-app-bar color="primary" dark>
-      <v-app-bar-title>
-        <v-icon class="me-2">mdi-gift</v-icon>
-        {{ $t('app.title') }}
-      </v-app-bar-title>
-
-      <v-spacer />
-
-      <!-- Language Toggle -->
-      <v-btn-toggle v-model="locale" class="me-2">
-        <v-btn value="ja" size="small">日本語</v-btn>
-        <v-btn value="en" size="small">English</v-btn>
-      </v-btn-toggle>
-
-      <!-- Theme Toggle -->
-      <v-btn
-        :icon="
-          theme.global.current.value.dark
-            ? 'mdi-weather-sunny'
-            : 'mdi-weather-night'
-        "
-        @click="toggleTheme"
-      />
-    </v-app-bar>
-
     <v-main>
       <v-container class="pa-4">
         <v-row justify="center">
           <v-col cols="12" md="10" lg="8">
-            <!-- Step Indicator -->
-            <v-stepper
-              v-model="currentStep"
-              :items="stepItems"
-              alt-labels
-              class="mb-6"
-            />
+            <!-- Language Toggle -->
+            <div class="d-flex justify-end mb-4">
+              <v-btn-toggle v-model="locale" mandatory variant="outlined">
+                <v-btn value="ja" size="small">日本語</v-btn>
+                <v-btn value="en" size="small">English</v-btn>
+              </v-btn-toggle>
+            </div>
 
             <!-- Main Content -->
             <v-card>
               <v-card-text>
                 <div v-if="currentStep === 1">
-                  <h2 class="text-h5 mb-4">{{ $t('app.step.input') }}</h2>
-                  <p class="text-body-1 mb-4">{{ $t('app.subtitle') }}</p>
-                  <!-- ParticipantInput component will go here -->
-                  <div class="text-center">
-                    <v-btn color="primary" size="large" disabled>
-                      {{ $t('participant.add') }}
-                    </v-btn>
-                  </div>
+                  <ParticipantInput />
                 </div>
 
                 <div v-else-if="currentStep === 2">
@@ -93,6 +61,7 @@
                 <v-btn
                   v-if="currentStep < 4"
                   color="primary"
+                  :disabled="currentStep === 1 && !canProceedToGrouping"
                   @click="currentStep++"
                 >
                   {{ $t('result.next') }}
@@ -118,33 +87,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useTheme } from 'vuetify'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import ParticipantInput from './components/ParticipantInput.vue'
+import { useSushigetaState } from './composables/useSushigetaState'
 
-const { t, locale } = useI18n()
-const theme = useTheme()
+const { locale } = useI18n()
+const { state, canProceedToGrouping, setCurrentStep, resetState } =
+  useSushigetaState()
 
-const currentStep = ref(1)
-
-const stepItems = computed(() => [
-  { title: t('app.step.input'), value: 1 },
-  { title: t('app.step.group'), value: 2 },
-  { title: t('app.step.exchange'), value: 3 },
-  { title: t('app.step.result'), value: 4 },
-])
-
-const toggleTheme = () => {
-  theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
-}
+const currentStep = computed({
+  get: () => state.currentStep,
+  set: (value) => setCurrentStep(value),
+})
 
 const resetApp = () => {
-  currentStep.value = 1
-  // Additional reset logic will be added later
+  resetState()
 }
-
-// Watch locale changes to update Vuetify locale
-watch(locale, (_newLocale) => {
-  // Vuetify locale will be synced in the vuetify plugin
-})
 </script>

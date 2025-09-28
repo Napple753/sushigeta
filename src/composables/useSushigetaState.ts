@@ -36,7 +36,7 @@ const loadFromStorage = (): void => {
       const parsed = JSON.parse(stored)
       state.value.participants = parsed.participants || []
       state.value.groups = parsed.groups || []
-      state.value.currentStep = parsed.currentStep || 1
+      // stepは保持する必要なし。再読込時は入力画面から再入力
     }
   } catch (error) {
     console.warn('Failed to load from localStorage:', error)
@@ -49,7 +49,7 @@ const saveToStorage = (): void => {
     const toSave = {
       participants: state.value.participants,
       groups: state.value.groups,
-      currentStep: state.value.currentStep,
+      // stepは保持する必要なし。再読込時は入力画面から再入力
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
   } catch (error) {
