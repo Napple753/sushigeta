@@ -248,26 +248,86 @@ export function useSushigetaState() {
   // Exchange validation (placeholder)
   const validateExchange = (): ExchangeValidationResult => {
     if (participantCount.value < 2) {
-      return { isValid: false, message: 'At least 2 participants required' }
+      return { isValid: false, message: 'group.validation.atLeast2' }
     }
 
     if (groupedParticipants.value.size === 1) {
-      return {
-        isValid: false,
-        message: 'All participants are in the same group',
-      }
+      return { isValid: false, message: 'group.validation.sameGroup' }
     }
 
     // Quick check: if largest group > n/2, likely impossible
     if (maxGroupSize.value > Math.floor(participantCount.value / 2)) {
       return {
         isValid: false,
-        message: 'Largest group is too big for valid exchange',
+        message: 'group.validation.largestGroupTooBig',
       }
     }
 
-    // TODO: Implement actual 1000-try validation
-    return { isValid: true }
+    // Try generating once (up to N tries) just to assert possibility
+    const res = tryGenerateAssignments(1000)
+    if (!res) return { isValid: false, message: 'exchange.impossible' }
+    return { isValid: true, message: 'exchange.ready' }
+  }
+
+  // Fisher–Yates shuffle
+  const shuffleInPlace = <T>(arr: T[]): void => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+  }
+
+  // Attempt to generate valid assignments respecting constraints
+  const tryGenerateAssignments = (
+    maxTries = 1000
+  ): import('@/types').Assignment[] | null => {
+    const participants = [...state.value.participants]
+    const n = participants.length
+    if (n < 2) return null
+
+    for (let attempt = 0; attempt < maxTries; attempt++) {
+      // Create a permutation of receivers
+      const receivers = [...participants]
+      shuffleInPlace(receivers)
+
+      let valid = true
+      for (let i = 0; i < n; i++) {
+        const giver = participants[i]
+        const receiver = receivers[i]
+        if (
+          giver.id === receiver.id ||
+          (giver.groupId &&
+            receiver.groupId &&
+            giver.groupId === receiver.groupId)
+        ) {
+          valid = false
+          break
+        }
+      }
+
+      if (!valid) continue
+
+      return participants.map((giver, i) => ({
+        giverId: giver.id,
+        receiverId: receivers[i].id,
+      }))
+    }
+
+    return null
+  }
+
+  const performExchange = (): boolean => {
+    const result = tryGenerateAssignments(1000)
+    if (!result) {
+      state.value.assignments = []
+      state.value.errorMessage = 'exchange.impossible'
+      state.value.isExchangeReady = false
+      return false
+    }
+    state.value.assignments = result
+    state.value.errorMessage = null
+    state.value.isExchangeReady = true
+    return true
   }
 
   // Watch for changes to trigger auto-save
@@ -308,6 +368,8 @@ export function useSushigetaState() {
     ensureGroupExists,
     moveParticipantToOwnGroup,
     createNewGroup,
+    performExchange,
+    tryGenerateAssignments,
 
     // Utilities
     normalizeName,
