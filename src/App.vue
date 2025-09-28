@@ -14,20 +14,20 @@
 
             <!-- Main Content -->
             <v-card>
+              <v-card-title class="flex-column align-center">
+                <div>
+                  <h1 class="text-h4 mb-1">{{ $t('app.title') }}</h1>
+                </div>
+                <div class="text-subtitle-1 text-grey">
+                  {{ $t('app.subtitle') }}
+                </div>
+              </v-card-title>
               <v-card-text>
                 <div v-if="currentStep === 1">
-                  <ParticipantInput />
+                  <GroupManager />
                 </div>
 
                 <div v-else-if="currentStep === 2">
-                  <h2 class="text-h5 mb-4">{{ $t('app.step.group') }}</h2>
-                  <!-- GroupManager component will go here -->
-                  <v-alert type="info" class="mb-4">
-                    {{ $t('group.instruction') }}
-                  </v-alert>
-                </div>
-
-                <div v-else-if="currentStep === 3">
                   <h2 class="text-h5 mb-4">{{ $t('app.step.exchange') }}</h2>
                   <!-- Exchange logic will go here -->
                   <div class="text-center">
@@ -37,12 +37,10 @@
                   </div>
                 </div>
 
-                <div v-else-if="currentStep === 4">
+                <div v-else-if="currentStep === 3">
                   <h2 class="text-h5 mb-4">{{ $t('app.step.result') }}</h2>
                   <!-- ExchangePresentation component will go here -->
-                  <v-alert type="success">
-                    {{ $t('result.title') }}
-                  </v-alert>
+                  <v-alert type="success">{{ $t('exchange.ready') }}</v-alert>
                 </div>
               </v-card-text>
 
@@ -59,7 +57,7 @@
                 <v-spacer v-else />
 
                 <v-btn
-                  v-if="currentStep < 4"
+                  v-if="currentStep < 3"
                   color="primary"
                   :disabled="currentStep === 1 && !canProceedToGrouping"
                   @click="currentStep++"
@@ -69,7 +67,7 @@
                 </v-btn>
 
                 <v-btn
-                  v-if="currentStep === 4"
+                  v-if="currentStep === 3"
                   color="error"
                   variant="outlined"
                   @click="resetApp"
@@ -89,7 +87,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import ParticipantInput from './components/ParticipantInput.vue'
+import GroupManager from './components/GroupManager.vue'
 import { useSushigetaState } from './composables/useSushigetaState'
 
 const { locale } = useI18n()
@@ -97,7 +95,7 @@ const { state, canProceedToGrouping, setCurrentStep, resetState } =
   useSushigetaState()
 
 const currentStep = computed({
-  get: () => state.currentStep,
+  get: () => state.value.currentStep,
   set: (value) => setCurrentStep(value),
 })
 

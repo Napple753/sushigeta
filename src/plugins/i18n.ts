@@ -29,11 +29,31 @@ const messages = {
       clearAll: 'すべて削除',
       clearConfirm: 'すべての参加者を削除しますか？',
       noParticipants: '参加者がいません',
+      addPrompt: '参加者を追加してください',
     },
     group: {
       title: 'グループ分け',
       instruction: 'ドラッグして参加者をグループに分けてください',
+      instructions:
+        'ドラッグ&ドロップで参加者を移動してグループ分けを行ってください。同じグループのメンバー同士は交換しません。',
       keyboard: 'キーボード操作',
+      reset: 'グループリセット',
+      empty: 'ここに参加者をドロップ',
+      noParticipants: '参加者を先に追加してください',
+      managerTitle: '参加者とグループ管理',
+      count: '{count}グループ',
+      resetAllConfirm: 'すべての参加者とグループをリセットしますか？',
+      resetNote: '※保存されたデータも削除されます',
+      newIndependentTitle: '独立したグループを作成',
+      newIndependentDescription:
+        'ここにドロップすると、その人だけのグループになります',
+      newGroupTitle: '新しいグループを作成',
+      newGroupDescription: 'ここにドロップすると新しいグループが作成されます',
+      validation: {
+        atLeast2: '参加者は2人以上必要です',
+        sameGroup: '全員が同じグループです',
+        largestGroupTooBig: '最大グループの人数が多すぎます',
+      },
     },
     exchange: {
       title: '交換',
@@ -60,6 +80,7 @@ const messages = {
       cancel: 'キャンセル',
       back: '戻る',
       ok: 'OK',
+      reset: 'リセット',
     },
   },
   en: {
@@ -90,11 +111,31 @@ const messages = {
       clearAll: 'Clear All',
       clearConfirm: 'Are you sure you want to remove all participants?',
       noParticipants: 'No participants yet',
+      addPrompt: 'Please add participants',
     },
     group: {
       title: 'Grouping',
       instruction: 'Drag participants to organize them into groups',
+      instructions:
+        'Use drag & drop to move participants between groups. Members of the same group will not exchange gifts with each other.',
       keyboard: 'Keyboard Operation',
+      reset: 'Reset Groups',
+      empty: 'Drop participants here',
+      noParticipants: 'Please add participants first',
+      managerTitle: 'Participants & Group Management',
+      count: '{count} groups',
+      resetAllConfirm: 'Reset all participants and groups?',
+      resetNote: 'Saved data will also be deleted',
+      newIndependentTitle: 'Create an independent group',
+      newIndependentDescription:
+        'Drop here to make a one-person group for the participant',
+      newGroupTitle: 'Create a new group',
+      newGroupDescription: 'Drop here to create a new group',
+      validation: {
+        atLeast2: 'At least 2 participants required',
+        sameGroup: 'All participants are in the same group',
+        largestGroupTooBig: 'Largest group is too big for valid exchange',
+      },
     },
     exchange: {
       title: 'Exchange',
@@ -122,6 +163,7 @@ const messages = {
       cancel: 'Cancel',
       back: 'Back',
       ok: 'OK',
+      reset: 'Reset',
     },
   },
 }

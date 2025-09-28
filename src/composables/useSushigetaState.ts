@@ -19,7 +19,7 @@ const createInitialState = (): AppState => ({
   participants: [],
   groups: [],
   assignments: [],
-  currentStep: 1,
+  currentStep: 1, // Start from group management (was participant input)
   isExchangeReady: false,
   isCheckingExchange: false,
   errorMessage: null,
@@ -130,6 +130,7 @@ export function useSushigetaState() {
     state.value.participants = state.value.participants.filter(
       (p) => p.id !== id
     )
+    cleanupEmptyGroups()
     debouncedSave()
   }
 
@@ -149,9 +150,44 @@ export function useSushigetaState() {
       (p) => p.id === participantId
     )
     if (participant) {
+      ensureGroupExists(groupId)
       participant.groupId = groupId
+      cleanupEmptyGroups()
       debouncedSave()
     }
+  }
+
+  const ensureGroupExists = (groupId: string): void => {
+    if (!state.value.groups.some((g) => g.id === groupId)) {
+      const group: import('@/types').Group = {
+        id: groupId,
+        label: String(state.value.groups.length + 1),
+      }
+      state.value.groups.push(group)
+    }
+  }
+
+  const moveParticipantToOwnGroup = (participantId: string): void => {
+    const participant = state.value.participants.find(
+      (p) => p.id === participantId
+    )
+    if (!participant) return
+    const targetId = participant.id
+    ensureGroupExists(targetId)
+    participant.groupId = targetId
+    cleanupEmptyGroups()
+    debouncedSave()
+  }
+
+  const createNewGroup = (): string => {
+    const newId = `g_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const group: import('@/types').Group = {
+      id: newId,
+      label: String(state.value.groups.length + 1),
+    }
+    state.value.groups.push(group)
+    debouncedSave()
+    return newId
   }
 
   const setCurrentStep = (step: number): void => {
@@ -168,8 +204,49 @@ export function useSushigetaState() {
     }
   }
 
+  const initializeGroups = (): void => {
+    // Create individual groups for each participant if not already grouped
+    const existingGroups = new Set(state.value.groups.map((g) => g.id))
+
+    state.value.participants.forEach((participant) => {
+      if (!existingGroups.has(participant.groupId)) {
+        const group: import('@/types').Group = {
+          id: participant.groupId,
+          label: String(state.value.groups.length + 1),
+        }
+        state.value.groups.push(group)
+        existingGroups.add(participant.groupId)
+      }
+    })
+
+    debouncedSave()
+  }
+
+  const getGroupParticipants = (groupId: string): Participant[] => {
+    return state.value.participants.filter((p) => p.groupId === groupId)
+  }
+
+  const cleanupEmptyGroups = (): void => {
+    const usedGroupIds = new Set(state.value.participants.map((p) => p.groupId))
+    state.value.groups = state.value.groups.filter((group) =>
+      usedGroupIds.has(group.id)
+    )
+    debouncedSave()
+  }
+
+  const resetGroups = (): void => {
+    // Reset each participant to their own group
+    state.value.participants.forEach((participant) => {
+      participant.groupId = participant.id
+    })
+
+    // Clear all groups and recreate individual groups
+    state.value.groups = []
+    initializeGroups()
+  }
+
   // Exchange validation (placeholder)
-  const validateExchange = async (): Promise<ExchangeValidationResult> => {
+  const validateExchange = (): ExchangeValidationResult => {
     if (participantCount.value < 2) {
       return { isValid: false, message: 'At least 2 participants required' }
     }
@@ -206,7 +283,7 @@ export function useSushigetaState() {
 
   return {
     // State
-    state: state.value,
+    state,
 
     // Computed
     participantCount,
@@ -223,7 +300,14 @@ export function useSushigetaState() {
     moveParticipantToGroup,
     setCurrentStep,
     resetState,
+    initializeGroups,
+    getGroupParticipants,
+    cleanupEmptyGroups,
+    resetGroups,
     validateExchange,
+    ensureGroupExists,
+    moveParticipantToOwnGroup,
+    createNewGroup,
 
     // Utilities
     normalizeName,

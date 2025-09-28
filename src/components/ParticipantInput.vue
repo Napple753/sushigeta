@@ -14,7 +14,7 @@
                 size="small"
                 class="ms-2"
               >
-                {{ participantCount }}人
+                {{ $t('participant.count', { count: participantCount }) }}
               </v-chip>
             </div>
             <v-btn
