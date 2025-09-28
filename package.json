@@ -22,7 +22,8 @@
         "vue": "^3.4.0",
         "vue-i18n": "^10.0.0",
         "vuedraggable": "^4.1.0",
-        "vuetify": "^3.5.0"
+        "vuetify": "^3.5.0",
+        "@mdi/font": "^7.4.0"
     },
     "lint-staged": {
         "*.{vue,js,ts}": [
