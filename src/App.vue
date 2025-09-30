@@ -57,23 +57,49 @@
                   </div>
 
                   <div v-else>
-                    <!-- One by one reveal -->
+                    <!-- One by one reveal with dual drum roll (giver | receiver) -->
                     <div
                       v-if="revealIndex < assignments.length"
                       class="text-center my-6"
                     >
-                      <div class="text-h6 mb-2">
+                      <div class="text-h6 mb-4">
                         {{ $t('result.oneByOne') }}
                       </div>
-                      <div class="text-h4 my-4">
-                        {{ getName(assignments[revealIndex].giverId) }}
-                        <v-icon class="mx-3">mdi-arrow-right</v-icon>
-                        {{ getName(assignments[revealIndex].receiverId) }}
+                      <div
+                        class="d-flex flex-column align-center justify-center ga-4 my-4"
+                        style="width: 100%"
+                      >
+                        <NameLotteryCore
+                          v-if="currentGiver && currentReceiver"
+                          :key="`giver-${revealIndex}`"
+                          ref="giverRef"
+                          :winner="currentGiver!"
+                          :candidates="allParticipants"
+                          :play-drum-roll="true"
+                        />
+                        <v-icon size="36">mdi-arrow-down</v-icon>
+                        <NameLotteryCore
+                          v-if="currentGiver && currentReceiver"
+                          :key="`receiver-${revealIndex}`"
+                          ref="receiverRef"
+                          :winner="currentReceiver!"
+                          :candidates="allParticipants"
+                          :play-drum-roll="true"
+                        />
                       </div>
-                      <v-btn color="primary" @click="nextReveal">
-                        {{ $t('result.next') }}
-                        <v-icon end>mdi-arrow-right</v-icon>
-                      </v-btn>
+
+                      <div class="mt-6">
+                        <v-btn
+                          color="primary"
+                          :disabled="
+                            isRolling || !currentGiver || !currentReceiver
+                          "
+                          @click="onNextInStep3"
+                        >
+                          {{ $t('result.next') }}
+                          <v-icon end>mdi-arrow-right</v-icon>
+                        </v-btn>
+                      </div>
                     </div>
 
                     <!-- Summary -->
@@ -101,10 +127,13 @@
                         </div>
                       </div>
                       <v-list density="comfortable" class="bg-transparent">
-                        <v-list-item v-for="a in assignments" :key="a.giverId">
+                        <v-list-item
+                          v-for="(_, pos) in revealOrder"
+                          :key="orderedAssignmentAt(pos)?.giverId"
+                        >
                           <v-list-item-title>
-                            {{ getName(a.giverId) }} →
-                            {{ getName(a.receiverId) }}
+                            {{ getName(orderedAssignmentAt(pos).giverId) }} →
+                            {{ getName(orderedAssignmentAt(pos).receiverId) }}
                           </v-list-item-title>
                         </v-list-item>
                       </v-list>
@@ -154,9 +183,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick } from 'vue'
+import { shuffleArray } from '@/logic/shuffleArray'
 import { useI18n } from 'vue-i18n'
 import GroupManager from './components/GroupManager.vue'
+import NameLotteryCore from './components/NameLotteryCore.vue'
 import { useSushigetaState } from './composables/useSushigetaState'
 
 const { locale } = useI18n()
@@ -181,19 +212,68 @@ const resetApp = () => {
 // Exchange UI state and helpers
 const revealIndex = ref(0)
 const assignments = computed(() => state.value.assignments)
+const revealOrder = ref<number[]>([])
+const orderedAssignmentAt = (idx: number) =>
+  state.value.assignments[revealOrder.value[idx]]
 const isExchangeValid = computed(() => validateExchange().isValid)
 const statusMessageKey = computed(() => validateExchange().message || '')
+const isRolling = ref(false)
+const allParticipants = computed(() => state.value.participants)
+const currentReceiver = computed(() =>
+  state.value.participants.find(
+    (p) => p.id === orderedAssignmentAt(revealIndex.value)?.receiverId
+  )
+)
+const currentGiver = computed(() =>
+  state.value.participants.find(
+    (p) => p.id === orderedAssignmentAt(revealIndex.value)?.giverId
+  )
+)
+const giverRef = ref<InstanceType<typeof NameLotteryCore> | null>(null)
+const receiverRef = ref<InstanceType<typeof NameLotteryCore> | null>(null)
+const ROLL_MS = 500
 
 const onStartExchange = () => {
   const ok = performExchange()
   if (ok) {
     revealIndex.value = 0
+    isRolling.value = false
     currentStep.value = 3
+    // Create random reveal order for givers
+    revealOrder.value = shuffleArray(state.value.assignments.map((_, i) => i))
+    // Auto start the first pair after rendering
+    nextTick().then(() => startCurrentPairRoll())
   }
 }
 
-const nextReveal = () => {
-  if (revealIndex.value < assignments.value.length) {
+const startCurrentPairRoll = async () => {
+  if (isRolling.value) return
+  isRolling.value = true
+  await nextTick()
+  // eslint-disable-next-line no-console
+  console.log('[App] giver draw start', {
+    index: revealIndex.value,
+    giver: currentGiver.value?.name,
+    ms: ROLL_MS,
+  })
+  await giverRef.value?.draw(ROLL_MS, 0)
+  // eslint-disable-next-line no-console
+  console.log('[App] giver draw done')
+  await receiverRef.value?.draw(ROLL_MS, 0)
+  // eslint-disable-next-line no-console
+  console.log('[App] receiver draw done')
+  isRolling.value = false
+}
+
+const onNextInStep3 = async () => {
+  if (isRolling.value) return
+  // If current pair finished, move to next or summary and start roll
+  if (revealIndex.value < assignments.value.length - 1) {
+    revealIndex.value++
+    await nextTick()
+    await startCurrentPairRoll()
+  } else {
+    // Move to summary view
     revealIndex.value++
   }
 }
@@ -204,9 +284,10 @@ const getName = (id: string) => {
 }
 
 const copySummary = async () => {
-  const lines = assignments.value.map(
-    (a) => `${getName(a.giverId)} -> ${getName(a.receiverId)}`
-  )
+  const lines = revealOrder.value.map((pos) => {
+    const a = orderedAssignmentAt(pos)
+    return `${getName(a.giverId)} -> ${getName(a.receiverId)}`
+  })
   try {
     await navigator.clipboard.writeText(lines.join('\n'))
   } catch (e) {
@@ -217,4 +298,6 @@ const copySummary = async () => {
 const printPage = () => {
   window.print()
 }
+
+// no-op: finish events handled via awaiting draw()
 </script>
