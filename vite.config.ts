@@ -3,6 +3,8 @@ import vue from '@vitejs/plugin-vue'
 import vuetify from 'vite-plugin-vuetify'
 
 export default defineConfig({
+  // Use repository subpath on GitHub Pages
+  base: process.env.GITHUB_ACTIONS ? '/sushigeta/' : '/',
   plugins: [vue(), vuetify({ autoImport: true })],
   resolve: {
     alias: {
