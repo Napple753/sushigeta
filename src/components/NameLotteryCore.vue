@@ -52,7 +52,7 @@ onMounted(() => {
 async function moveTo(pos: number, time: number = 0) {
   transition_duration.value = time
   bottom_pos.value = pos
-  await wait(Math.max(time, 10))
+  await wait(Math.max(time, 100))
   transition_duration.value = 0
 }
 

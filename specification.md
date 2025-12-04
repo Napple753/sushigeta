@@ -1,3 +1,5 @@
+# SUSHIGETA: Simple Unwrapping System for Holiday Interactive Gift Engagement and Trade Assistant
+
 # アーキテクチャ
 - フロントエンド完結SPA
 - vite
@@ -52,3 +54,4 @@
 - 一人ずつの発表時は「戻る」ボタンは不要
 - 再シャッフルも不要
 - URLは変化させない(ルーティングなし)
+- コピー・印刷機能は不要

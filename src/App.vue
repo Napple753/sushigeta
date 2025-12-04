@@ -4,8 +4,8 @@
       <v-container class="pa-4">
         <v-row justify="center">
           <v-col cols="12" md="10" lg="8">
-            <!-- Language Toggle -->
-            <div class="d-flex justify-end mb-4">
+            <!-- Language Toggle (only on first page) -->
+            <div v-if="currentStep === 1" class="d-flex justify-end mb-4">
               <v-btn-toggle v-model="locale" mandatory variant="outlined">
                 <v-btn value="ja" size="small">日本語</v-btn>
                 <v-btn value="en" size="small">English</v-btn>
@@ -39,10 +39,15 @@
                   <div class="text-center">
                     <v-btn
                       color="success"
-                      size="large"
+                      variant="elevated"
+                      size="x-large"
+                      elevation="8"
+                      rounded="xl"
+                      :block="true"
                       :disabled="!isExchangeValid"
                       @click="onStartExchange"
                     >
+                      <v-icon start size="28">mdi-arrow-right-bold</v-icon>
                       {{ $t('exchange.start') }}
                     </v-btn>
                   </div>
@@ -62,9 +67,6 @@
                       v-if="revealIndex < assignments.length"
                       class="text-center my-6"
                     >
-                      <div class="text-h6 mb-4">
-                        {{ $t('result.oneByOne') }}
-                      </div>
                       <div
                         class="d-flex flex-column align-center justify-center ga-4 my-4"
                         style="width: 100%"
@@ -91,41 +93,24 @@
                       <div class="mt-6">
                         <v-btn
                           color="primary"
+                          variant="elevated"
+                          size="x-large"
+                          elevation="8"
+                          rounded="xl"
+                          :block="true"
                           :disabled="
                             isRolling || !currentGiver || !currentReceiver
                           "
                           @click="onNextInStep3"
                         >
+                          <v-icon start size="32">mdi-arrow-right-bold</v-icon>
                           {{ $t('result.next') }}
-                          <v-icon end>mdi-arrow-right</v-icon>
                         </v-btn>
                       </div>
                     </div>
 
-                    <!-- Summary -->
+                    <!-- Summary (final list, heading removed as requested) -->
                     <div v-else>
-                      <div
-                        class="d-flex align-center justify-space-between mb-2"
-                      >
-                        <div class="text-h6">{{ $t('result.summary') }}</div>
-                        <div>
-                          <v-btn
-                            class="me-2"
-                            size="small"
-                            variant="tonal"
-                            @click="copySummary"
-                          >
-                            {{ $t('result.copy') }}
-                          </v-btn>
-                          <v-btn
-                            size="small"
-                            variant="tonal"
-                            @click="printPage"
-                          >
-                            {{ $t('result.print') }}
-                          </v-btn>
-                        </div>
-                      </div>
                       <v-list density="comfortable" class="bg-transparent">
                         <v-list-item
                           v-for="(_, pos) in revealOrder"
@@ -145,7 +130,11 @@
               <!-- Navigation -->
               <v-card-actions class="justify-space-between">
                 <v-btn
-                  v-if="currentStep > 1 && currentStep !== 3"
+                  v-if="
+                    currentStep > 1 &&
+                    currentStep !== 3 &&
+                    !(currentStep === 2 && isExchangeValid)
+                  "
                   variant="outlined"
                   @click="currentStep--"
                 >
@@ -157,23 +146,52 @@
                 <v-btn
                   v-if="currentStep === 1"
                   color="primary"
+                  variant="elevated"
+                  size="x-large"
+                  elevation="6"
+                  rounded="xl"
+                  :block="true"
                   :disabled="currentStep === 1 && !canProceedToGrouping"
                   @click="currentStep++"
                 >
+                  <v-icon start size="28">mdi-arrow-right-bold</v-icon>
                   {{ $t('result.next') }}
-                  <v-icon end>mdi-arrow-right</v-icon>
                 </v-btn>
 
+                <!-- Restart button shown only on summary page -->
                 <v-btn
-                  v-if="currentStep === 3"
-                  color="error"
+                  v-if="currentStep === 3 && revealIndex >= assignments.length"
+                  color="secondary"
                   variant="outlined"
-                  @click="resetApp"
+                  size="large"
+                  rounded="xl"
+                  :block="true"
+                  @click="showRestartConfirm = true"
                 >
-                  <v-icon start>mdi-refresh</v-icon>
-                  {{ $t('result.reset') }}
+                  <v-icon start>mdi-reload</v-icon>
+                  もう一度
                 </v-btn>
               </v-card-actions>
+              <!-- Confirmation Dialog -->
+              <v-dialog v-model="showRestartConfirm" max-width="400">
+                <v-card>
+                  <v-card-title class="text-h6">再度実行確認</v-card-title>
+                  <v-card-text>
+                    現在の結果を破棄して最初からやり直します。よろしいですか？
+                  </v-card-text>
+                  <v-card-actions class="justify-end">
+                    <v-btn variant="text" @click="showRestartConfirm = false"
+                      >キャンセル</v-btn
+                    >
+                    <v-btn
+                      color="primary"
+                      variant="elevated"
+                      @click="confirmRestart"
+                      >OK</v-btn
+                    >
+                  </v-card-actions>
+                </v-card>
+              </v-dialog>
             </v-card>
           </v-col>
         </v-row>
@@ -195,7 +213,6 @@ const {
   state,
   canProceedToGrouping,
   setCurrentStep,
-  resetState,
   validateExchange,
   performExchange,
 } = useSushigetaState()
@@ -204,10 +221,6 @@ const currentStep = computed({
   get: () => state.value.currentStep,
   set: (value) => setCurrentStep(value),
 })
-
-const resetApp = () => {
-  resetState()
-}
 
 // Exchange UI state and helpers
 const revealIndex = ref(0)
@@ -231,7 +244,15 @@ const currentGiver = computed(() =>
 )
 const giverRef = ref<InstanceType<typeof NameLotteryCore> | null>(null)
 const receiverRef = ref<InstanceType<typeof NameLotteryCore> | null>(null)
-const ROLL_MS = 500
+const ROLL_MS = 5000
+
+// Restart dialog state
+const showRestartConfirm = ref(false)
+const confirmRestart = () => {
+  showRestartConfirm.value = false
+  // Full reload as requested
+  window.location.reload()
+}
 
 const onStartExchange = () => {
   const ok = performExchange()
@@ -259,7 +280,7 @@ const startCurrentPairRoll = async () => {
   await giverRef.value?.draw(ROLL_MS, 0)
   // eslint-disable-next-line no-console
   console.log('[App] giver draw done')
-  await receiverRef.value?.draw(ROLL_MS, 0)
+  await receiverRef.value?.draw(ROLL_MS, Math.floor(Math.random() * 1.3))
   // eslint-disable-next-line no-console
   console.log('[App] receiver draw done')
   isRolling.value = false
@@ -283,21 +304,7 @@ const getName = (id: string) => {
   return p ? p.name : id
 }
 
-const copySummary = async () => {
-  const lines = revealOrder.value.map((pos) => {
-    const a = orderedAssignmentAt(pos)
-    return `${getName(a.giverId)} -> ${getName(a.receiverId)}`
-  })
-  try {
-    await navigator.clipboard.writeText(lines.join('\n'))
-  } catch (e) {
-    // ignore
-  }
-}
-
-const printPage = () => {
-  window.print()
-}
+// copy / print 機能は不要になったため削除
 
 // no-op: finish events handled via awaiting draw()
 </script>
